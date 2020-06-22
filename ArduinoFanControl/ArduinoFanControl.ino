@@ -5,8 +5,8 @@ const int argb_pins[] = { 10, 16, 17 };
 
 /* FAN variables */
 const int fan_nr = 5;
-const int fan_pwm_pins[] = { 3, 5, 6, 9, 11 };
-const int fan_rpm_pins[] = { 2, 4, 7, 8, 12 };
+const int fan_pwm_pins[] = { 2, 5, 6, 9, 11 };
+const int fan_rpm_pins[] = { 3, 4, 7, 8, 12 };
 const void* fan_isr[] = { &fan0_isr, &fan1_isr, &fan2_isr, &fan3_isr, &fan4_isr};
 int fan_int_count[fan_nr] = {0};
 unsigned long fan_millis[fan_nr] = {0};
@@ -47,14 +47,14 @@ void init_fans() {
     pinMode(fan_pwm_pins[i], OUTPUT);
     pinMode(fan_rpm_pins[i], INPUT_PULLUP);
     attachPCINT(digitalPinToPCINT(fan_rpm_pins[i]), fan_isr[i] , FALLING);
-    fan_target[i] = 255;
+    fan_target[i] = 100;
   }
   set_fans_to_target();
 }
 
 void set_fans_to_target() {
   for ( int i = 0; i < fan_nr; i++) {
-    analogWrite(fan_pwm_pins[i], fan_target[i]);
+    analogWrite(fan_pwm_pins[i], map(fan_target[i], 0, 100, 0, 255));
   }
 }
 

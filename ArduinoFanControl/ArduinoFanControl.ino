@@ -1,4 +1,8 @@
+#include <avr/wdt.h>
 #include "PinChangeInterrupt.h"
+
+/* Control variables */
+const int target_liquid_temp = 40;
 
 /* ARGB variables */
 const int argb_pins[] = { 10, 16, 17 };
@@ -23,6 +27,26 @@ const int ntc_r1 = 6800;
 const float ntc_beta = 3306.17;
 const float ntc_cal_temp = 39.3 + 273.15;
 const float ntc_cal_res = 6000.0;
+
+/* Case input variables */
+const int case_fan_pin = A1;
+const int case_led_pin = 13;
+enum fanspeed { none, low, medium, high };
+
+/* Control methods */
+void temp_control() {
+  enum fanspeed fan_setting = get_case_fan();
+  if ( fan_setting == fanspeed::high || fan_setting == fanspeed::none )
+    for ( int i = 0; i < fan_nr; i++)
+      fan_target[i] = 100;
+  else if ( fan_setting == fanspeed::medium )
+    for ( int i = 0; i < fan_nr; i++)
+      fan_target[i] = 50;
+  else if ( fan_setting == fanspeed::low )
+    for ( int i = 0; i < fan_nr; i++)
+      fan_target[i] = 25;
+  set_fans_to_target();
+}
 
 /* NTC methods */
 float adc_to_temp(int ntc_pin) {
@@ -93,20 +117,48 @@ void fan4_isr() {
   (fan_int_count[4])++;
 }
 
+/* Case input methods */
+int get_case_fan() {
+  int raw = analogRead(case_fan_pin);
+  if ( raw < 600 ) return fanspeed::low;
+  else if ( raw >= 600 && raw < 900) return fanspeed::medium;
+  else if ( raw > 900 ) return fanspeed::high;
+  else return fanspeed::none;
+}
+
+void print_case_input() {
+  Serial.print("CFAN: ");
+  Serial.print(get_case_fan());
+  Serial.print(" CLED: ");
+  Serial.println(digitalRead(case_led_pin));
+}
+
 /* Program */
 void setup() {
+  // Setup watchdog
+  //wdt_enable(WDTO_4S); // Disable watchdog because bootloader doesn't reset it.
+  
   // Serial setup
   Serial.begin(115200);
   Serial.println("Setup...");
 
+  // Setup fans
   init_fans();
+
+  //Setup case
+  pinMode(case_led_pin, INPUT);
 
   Serial.println("Starting loop");
 }
 
 void loop() {
+  //wdt_reset(); // Disable watchdog because bootloader doesn't reset it.
+  
   print_temps();
   print_fan_rpms();
+  print_case_input();
+  temp_control();
+
   Serial.println();
   delay(1000);
 }

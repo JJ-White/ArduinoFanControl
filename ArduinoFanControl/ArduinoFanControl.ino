@@ -1,11 +1,15 @@
 #include <avr/wdt.h>
 #include "PinChangeInterrupt.h"
+#include <FastLED.h>
 
 /* Control variables */
 const int target_liquid_temp = 40;
 
 /* ARGB variables */
-const int argb_pins[] = { 10, 16, 17 };
+#define nr_leds 96
+CRGB argb0[nr_leds];
+CRGB argb1[nr_leds];
+CRGB argb2[nr_leds];
 
 /* FAN variables */
 const int fan_nr = 5;
@@ -46,6 +50,20 @@ void temp_control() {
     for ( int i = 0; i < fan_nr; i++)
       fan_target[i] = 25;
   set_fans_to_target();
+}
+
+/* ARGB methods */
+void init_argb(){
+  FastLED.addLeds<WS2812B, 10, GRB>(argb0, nr_leds);
+  FastLED.addLeds<WS2812B, 16, GRB>(argb1, nr_leds);
+  FastLED.addLeds<WS2812B, 17, GRB>(argb2, nr_leds);
+  LEDS.setBrightness(255);
+
+  for( int i = 0; i < nr_leds; i++) argb0[i] = CRGB::Red;
+  for( int i = 0; i < nr_leds; i++) argb1[i] = CRGB::Red;
+  for( int i = 0; i < nr_leds; i++) argb2[i] = CRGB::Red;
+
+  FastLED.show();
 }
 
 /* NTC methods */
@@ -137,13 +155,16 @@ void print_case_input() {
 void setup() {
   // Setup watchdog
   //wdt_enable(WDTO_4S); // Disable watchdog because bootloader doesn't reset it.
-  
+
   // Serial setup
   Serial.begin(115200);
   Serial.println("Setup...");
 
   // Setup fans
   init_fans();
+
+  // Setup ARGB
+  init_argb();
 
   //Setup case
   pinMode(case_led_pin, INPUT);
@@ -153,7 +174,10 @@ void setup() {
 
 void loop() {
   //wdt_reset(); // Disable watchdog because bootloader doesn't reset it.
-  
+  Serial.print("[");
+  Serial.print(millis() / 1000);
+  Serial.println("]");
+
   print_temps();
   print_fan_rpms();
   print_case_input();

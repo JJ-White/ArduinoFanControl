@@ -19,6 +19,7 @@ const void* fan_isr[] = { &fan0_isr, &fan1_isr, &fan2_isr, &fan3_isr, &fan4_isr}
 int fan_int_count[fan_nr] = {0};
 unsigned long fan_millis[fan_nr] = {0};
 int fan_target[fan_nr];
+#define PUMP 4
 
 /* NTC variables
    Info for reading NTC and converting to temperature:
@@ -31,6 +32,7 @@ const int ntc_r1 = 6800;
 const float ntc_beta = 3306.17;
 const float ntc_cal_temp = 39.3 + 273.15;
 const float ntc_cal_res = 6000.0;
+#define WATER 2
 
 /* Case input variables */
 const int case_fan_pin = A1;
@@ -39,29 +41,39 @@ enum fanspeed { none, low, medium, high };
 
 /* Control methods */
 void temp_control() {
+  float temp = adc_to_temp(ntc_pins[WATER]);
   enum fanspeed fan_setting = get_case_fan();
   if ( fan_setting == fanspeed::high || fan_setting == fanspeed::none )
     for ( int i = 0; i < fan_nr; i++)
       fan_target[i] = 100;
-  else if ( fan_setting == fanspeed::medium )
+  else {
+    int target = pow(1.20, temp - 20);
+    if ( target < 0 ) target = 0;
+    else if (target > 100) target = 100;
+    Serial.print("Fanspeed: ");
+    Serial.println(target);
     for ( int i = 0; i < fan_nr; i++)
-      fan_target[i] = 50;
-  else if ( fan_setting == fanspeed::low )
-    for ( int i = 0; i < fan_nr; i++)
-      fan_target[i] = 25;
+      fan_target[i] = target;
+  }
+  //  else if ( fan_setting == fanspeed::medium )
+  //    for ( int i = 0; i < fan_nr; i++)
+  //      fan_target[i] = 50;
+  //  else if ( fan_setting == fanspeed::low )
+  //    for ( int i = 0; i < fan_nr; i++)
+  //      fan_target[i] = 25;
   set_fans_to_target();
 }
 
 /* ARGB methods */
-void init_argb(){
+void init_argb() {
   FastLED.addLeds<WS2812B, 10, GRB>(argb0, nr_leds);
   FastLED.addLeds<WS2812B, 16, GRB>(argb1, nr_leds);
   FastLED.addLeds<WS2812B, 17, GRB>(argb2, nr_leds);
-  LEDS.setBrightness(255);
+  LEDS.setBrightness(80);
 
-  for( int i = 0; i < nr_leds; i++) argb0[i] = CRGB::Red;
-  for( int i = 0; i < nr_leds; i++) argb1[i] = CRGB::Red;
-  for( int i = 0; i < nr_leds; i++) argb2[i] = CRGB::Red;
+  for ( int i = 0; i < nr_leds; i++) argb0[i] = CRGB::Red; // Bottom
+  for ( int i = 0; i < nr_leds; i++) argb1[i] = CRGB::Red; // Top
+  for ( int i = 0; i < nr_leds; i++) argb2[i] = CRGB::White; // GPU
 
   FastLED.show();
 }
@@ -96,8 +108,17 @@ void init_fans() {
 
 void set_fans_to_target() {
   for ( int i = 0; i < fan_nr; i++) {
-    analogWrite(fan_pwm_pins[i], map(fan_target[i], 0, 100, 0, 255));
+    if ( i == PUMP ) {
+      int target = fan_target[i] * 2;
+      if ( target < 0 ) target = 0;
+      else if (target > 100) target = 100;
+      analogWrite(fan_pwm_pins[i], map(target, 0, 100, 0, 255));
+      Serial.print("Pumpspeed: ");
+      Serial.println(target);
+    }
+    else analogWrite(fan_pwm_pins[i], map(fan_target[i], 0, 100, 0, 255));
   }
+
 }
 
 int get_fan_rpm(int fan) {

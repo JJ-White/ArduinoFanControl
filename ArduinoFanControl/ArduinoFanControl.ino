@@ -69,11 +69,20 @@ void init_argb() {
   FastLED.addLeds<WS2812B, 10, GRB>(argb0, nr_leds);
   FastLED.addLeds<WS2812B, 16, GRB>(argb1, nr_leds);
   FastLED.addLeds<WS2812B, 17, GRB>(argb2, nr_leds);
-  LEDS.setBrightness(80);
+  LEDS.setBrightness(255);
 
-  for ( int i = 0; i < nr_leds; i++) argb0[i] = CRGB::Red; // Bottom
-  for ( int i = 0; i < nr_leds; i++) argb1[i] = CRGB::Red; // Top
-  for ( int i = 0; i < nr_leds; i++) argb2[i] = CRGB::White; // GPU
+  for ( int i = 0; i < nr_leds; i++) { // Bottom
+    argb0[i] = CRGB::White;
+    argb0[i].fadeLightBy(128);
+  }
+  for ( int i = 0; i < nr_leds; i++) { // Top
+    argb1[i] = CRGB::White;
+    argb1[i].fadeLightBy(128);
+  }
+  for ( int i = 0; i < nr_leds; i++) { // GPU
+    argb2[i] = CRGB::Red;
+    argb2[i].fadeLightBy(0);
+  }
 
   FastLED.show();
 }

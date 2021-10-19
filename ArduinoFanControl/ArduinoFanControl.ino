@@ -128,7 +128,7 @@ void set_fans_to_target() {
       int target = fan_target[i];
       if ( target < MIN_FAN )
         target = MIN_FAN;
-      target += random(2) - 1; // Add random jitter to prevent harmonics
+      target += random(2); // Add random jitter to prevent harmonics
       analogWrite(fan_pwm_pins[i], map(target, 0, 100, 0, 255));
       Serial.print("Fanspeed: ");
       Serial.println(target);

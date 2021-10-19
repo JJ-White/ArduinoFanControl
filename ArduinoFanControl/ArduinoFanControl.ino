@@ -20,6 +20,7 @@ int fan_int_count[fan_nr] = {0};
 unsigned long fan_millis[fan_nr] = {0};
 int fan_target[fan_nr];
 #define PUMP 4
+#define MIN_FAN 20
 
 /* NTC variables
    Info for reading NTC and converting to temperature:
@@ -50,8 +51,6 @@ void temp_control() {
     int target = pow(1.20, temp - 20);
     if ( target < 0 ) target = 0;
     else if (target > 100) target = 100;
-    Serial.print("Fanspeed: ");
-    Serial.println(target);
     for ( int i = 0; i < fan_nr; i++)
       fan_target[i] = target;
   }
@@ -71,17 +70,17 @@ void init_argb() {
   FastLED.addLeds<WS2812B, 17, GRB>(argb2, nr_leds);
   LEDS.setBrightness(255);
 
-  for ( int i = 0; i < nr_leds; i++) { // Bottom
-    argb0[i] = CRGB::White;
-    argb0[i].fadeLightBy(128);
-  }
   for ( int i = 0; i < nr_leds; i++) { // Top
-    argb1[i] = CRGB::White;
-    argb1[i].fadeLightBy(128);
+    argb1[i] = CRGB::Red;
+    argb1[i].fadeLightBy(0);
   }
   for ( int i = 0; i < nr_leds; i++) { // GPU
     argb2[i] = CRGB::Red;
     argb2[i].fadeLightBy(0);
+  }
+  for ( int i = 0; i < nr_leds; i++) { // Bottom
+    argb0[i] = CRGB::Red;
+    argb0[i].fadeLightBy(0);
   }
 
   FastLED.show();
@@ -125,7 +124,15 @@ void set_fans_to_target() {
       Serial.print("Pumpspeed: ");
       Serial.println(target);
     }
-    else analogWrite(fan_pwm_pins[i], map(fan_target[i], 0, 100, 0, 255));
+    else {
+      int target = fan_target[i];
+      if ( target < MIN_FAN )
+        target = MIN_FAN;
+      target += random(2) - 1; // Add random jitter to prevent harmonics
+      analogWrite(fan_pwm_pins[i], map(target, 0, 100, 0, 255));
+      Serial.print("Fanspeed: ");
+      Serial.println(target);
+    }
   }
 
 }
@@ -181,6 +188,14 @@ void print_case_input() {
   Serial.println(digitalRead(case_led_pin));
 }
 
+void set_leds() {
+  if (digitalRead(case_led_pin))
+    LEDS.setBrightness(255);
+  else
+    LEDS.setBrightness(0);
+  FastLED.show();
+}
+
 /* Program */
 void setup() {
   // Setup watchdog
@@ -211,6 +226,7 @@ void loop() {
   print_temps();
   print_fan_rpms();
   print_case_input();
+  set_leds();
   temp_control();
 
   Serial.println();

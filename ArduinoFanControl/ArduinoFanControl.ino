@@ -129,6 +129,8 @@ void set_fans_to_target() {
       if ( target < MIN_FAN )
         target = MIN_FAN;
       target += random(2); // Add random jitter to prevent harmonics
+      if ( target < 0 ) target = 0;
+      else if (target > 100) target = 100;
       analogWrite(fan_pwm_pins[i], map(target, 0, 100, 0, 255));
       Serial.print("Fanspeed: ");
       Serial.println(target);
@@ -220,7 +222,7 @@ void setup() {
 void loop() {
   //wdt_reset(); // Disable watchdog because bootloader doesn't reset it.
   Serial.print("[");
-  Serial.print(millis() / 1000);
+  Serial.print(millis());
   Serial.println("]");
 
   print_temps();
@@ -230,5 +232,5 @@ void loop() {
   temp_control();
 
   Serial.println();
-  delay(1000);
+  delay(500);
 }
